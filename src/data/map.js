@@ -118,7 +118,7 @@ async function getStats() {
     `;
     const results = await db.query(sql);
     if (results && results.length > 0) {
-        return results[0];        
+        return results[0];
     }
     return null;
 }
@@ -155,9 +155,9 @@ async function getPokemonIVStats() {
 
 async function getPokemonOverviewStats() {
     const sql = `
-    SELECT date, SUM(count) AS count
+    SELECT DATE_ADD(date, INTERVAL 2 HOUR) AS datescanned, SUM(count) AS count
     FROM pokemon_stats
-    GROUP BY date
+    GROUP BY datescanned
     `;
     const results = await db.query(sql);
     return results;
@@ -255,10 +255,19 @@ async function getShinyRates(filter) {
             const rate = shiny === 0 || total === 0 ? 0 : Math.round(total / shiny);
             const imageUrl = locale.getPokemonIcon(pokemonId, 0);
             data.push({
-                id: `#${pokemonId}`,
+                id: {
+                    formatted: `#${pokemonId}`,
+                    sort: pokemonId
+                },
                 pokemon: `<img src="${imageUrl}" width="auto" height="32" />&nbsp;${name}`,
-                rate: `1/${rate}`,
-                count: `${shiny.toLocaleString()}/${total.toLocaleString()}`
+                rate: {
+                    formatted: `1/${rate}`,
+                    sort: rate
+                },
+                count: {
+                    formatted: `${shiny.toLocaleString()}/${total.toLocaleString()}`,
+                    sort: total
+                }
             });
         }
         return data;
@@ -287,6 +296,7 @@ async function getCommunityDayStats(filter) {
         SUM(iv >= 80 AND iv < 90) AS iv_80_89,
         SUM(iv >= 90 AND iv < 100) AS iv_90_99,
         SUM(iv = 100) AS iv_100,
+        SUM(shiny = 1) AS shiny,
         SUM(gender = 1) AS male,
         SUM(gender = 2) AS female,
         SUM(gender = 3) AS genderless,
@@ -477,8 +487,8 @@ async function getRaids(filter) {
 
 async function getGyms(filter) {
     const sql = `
-    SELECT 
-        lat, 
+    SELECT
+        lat,
         lon,
         guarding_pokemon_id,
         availble_slots,
@@ -529,11 +539,11 @@ async function getGyms(filter) {
 
 async function getQuests(filter) {
     const sql = `
-    SELECT 
-        lat, 
+    SELECT
+        lat,
         lon,
         quest_type,
-        quest_timestamp, 
+        quest_timestamp,
         quest_target,
         quest_conditions,
         quest_rewards,
@@ -584,8 +594,8 @@ async function getQuests(filter) {
 
 async function getInvasions(filter) {
     const sql = `
-    SELECT 
-        lat, 
+    SELECT
+        lat,
         lon,
         name,
         grunt_type,
@@ -626,8 +636,8 @@ async function getInvasions(filter) {
 
 async function getNests(filter) {
     const sql = `
-    SELECT 
-        lat, 
+    SELECT
+        lat,
         lon,
         name,
         pokemon_id,

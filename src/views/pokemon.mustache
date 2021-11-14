@@ -18,7 +18,7 @@
                 <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#heatmap">Heatmap</a></li>
                 <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#historical">Historical Lookup</a></li>
                 <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#shinystats">Shiny Rates</a></li>
-                <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#commday">Community Day</a></li>
+                <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#commday">Last 2 hours</a></li>
             </ul>
             <br>
             <div class="tab-content">
@@ -111,7 +111,7 @@
                 <!-- End Shiny Stats Tab -->
                 <!-- Start Community Day Tab -->
                 <div class="tab-pane fade" id="commday">
-                    <h3 class="page-header text-center">Community Day Stats</h3>
+                    <h3 class="page-header text-center">Detailed last 2 hours stats</h3>
                     <div class="card text-center p-1 m-3">
                         <div class="card-header bg-dark text-light"><b>Filters</b></div>
                         <div class="card-body">
@@ -138,7 +138,7 @@
                             </div>
                         </div>
                     </div>
-                
+
                     <div class="card text-center p-1 m-3">
                         <div class="card-header bg-dark text-light"><b>Statistics</b></div>
                         <div class="card-body">
@@ -155,12 +155,13 @@
                                                     <div class="col-lg-6 justify-content-right">
                                                         <h5 id="total-seen">0 seen</h5>
                                                         <h6 id="total-scanned">0 scanned</h6>
+                                                        <h6 id="shiny">Shiny: 0</h6>
                                                     </div>
                                                 </div>
                                                 <div class="row p-2">
                                                     <div class="col">
-                                                        <span><b>100% IV:</b><span id="iv100">0</span></span>
-                                                        <span><b>90% IV:</b><span id="iv90">0</span></span>
+                                                        <span><b>100% IV:</b><span id="iv100">0</span> |</span>
+                                                        <span><b>90% IV:</b><span id="iv90">0</span> |</span>
                                                         <span><b>0% IV:</b><span id="iv0">0</span></span>
                                                     </div>
                                                 </div>
@@ -481,15 +482,33 @@
         "lengthMenu": [[25, 50, 100, -1], [25, 50, 100, "All"]],
         "pageLength": 100,
         "columns": [
-            { "data": "id" },
+            { data: {
+                _: "id.formatted",
+                sort: "id.sort"
+            } },
             { "data": "pokemon" },
-            { "data": "rate" },
-            { "data": "count" },
+            { data: {
+                _: "rate.formatted",
+                sort: "rate.sort"
+            } },
+            { data: {
+                _: "count.formatted",
+                sort: "count.sort"
+            } },
+        ],
+        "columnDefs": [
+            { type: 'formatted-num', targets: [0, 2, 3] }
         ],
         "info": true,
         "order": [[ 0, "asc" ]],
         "search.caseInsensitive": true,
         "responsive": true
+    });
+
+    $('.nav-link').on('click', function () {
+        setTimeout(function () {
+            table.fixedHeader.adjust();
+        }, 200);
     });
 
     function getOverviewStats() {
@@ -505,13 +524,15 @@
                     var labels = [];
                     var values = [];
                     $.each(result.data.stats, function(key, value) {
-                        labels.push(value.date);
+                        var rawlabel = value.datescanned.split(/[- T :]/);
+                        var label = rawlabel[2]+'-'+rawlabel[1]+'-'+rawlabel[0];
+                        labels.push(label);
                         var value = parseInt(value.count);
                         values.push(value);
                     });
                     removeDataset(overviewChart);
-                    var obj = { 
-                        labels: labels, 
+                    var obj = {
+                        labels: labels,
                         datasets: [{
                             data: values,
                             backgroundColor: "dodgerblue",
@@ -533,7 +554,7 @@
         var pokemon = $('#stats-pokemon').val();
         $.ajax({
             url: `/api/stats?type=pokemon&start=${start}&end=${end}&pokemon_id=${pokemon}`,
-            type: 'POST', 
+            type: 'POST',
             success: function(result) {
                 if (result === null) {
                     console.log("Failed to parse result value.");
@@ -549,8 +570,8 @@
                         values.push(value);
                     });
                     removeDataset(historicalChart);
-                    var obj = { 
-                        labels: labels, 
+                    var obj = {
+                        labels: labels,
                         datasets: [{
                             data: values,
                             backgroundColor: "dodgerblue",
@@ -584,8 +605,8 @@
         var end = $('#commday-end').val();
         var pokemon = $('#commday-pokemon').val();
         var query = `?start=${start}&end=${end}&pokemon_id=${pokemon}`;
-        $.ajax({ 
-            url: "/api/pokemon/commday" + query, 
+        $.ajax({
+            url: "/api/pokemon/commday" + query,
             type: "POST",
             success: function(result) {
                 if (result === null) {
@@ -599,6 +620,7 @@
                 $("#iv100").text(result.data.stats.iv_100 || 0);
                 $("#iv90").text(result.data.stats.iv_90_99 || 0);
                 $("#iv0").text(result.data.stats.iv_0 || 0);
+                $("#shiny").text("Shiny: " + (result.data.stats.shiny || 0) + (result.data.stats.shiny === 0 ? "" : " (" + (result.data.stats.shiny === 0 || result.data.stats.with_iv === 0 ? 0 : "1/"+Math.round(result.data.stats.with_iv / result.data.stats.shiny)) + ")"));
                 $("#total-male").text(numberWithCommas(result.data.stats.male || 0) + " (" + Math.round((result.data.stats.male / result.data.stats.total) * 100, 2) + "%)");
                 $("#total-female").text(numberWithCommas(result.data.stats.female || 0) + " (" + Math.round((result.data.stats.female / result.data.stats.total) * 100, 2) + "%)");
                 $("#evo1").attr("src", result.data.stats.evo1.image);
@@ -610,15 +632,15 @@
 
                 removeDataset(scanChart);
                 var scanData = {
-                data: [result.data.stats.total || 0, result.data.stats.with_iv || 0],
-                backgroundColor: [
-                    'green',
-                    'blue'
-                ],
-                label: 'Seen'
+                  data: [(result.data.stats.total-result.data.stats.with_iv) || 0, result.data.stats.with_iv || 0],
+                  backgroundColor: [
+                      'red',
+                      'green'
+                  ],
+                  label: 'Seen'
                 };
                 addDataset(scanChart, [], scanData);
-        
+
                 removeDataset(levelChart);
                 var levelData = {
                     data: [
@@ -636,9 +658,9 @@
                     label: 'Levels'
                 };
                 addDataset(levelChart, [], levelData);
-        
+
                 removeDataset(ivChart);
-        
+
                 addDataset(ivChart, [], { data: [result.data.stats.iv_0], backgroundColor: 'black', label: '0% IV' });
                 addDataset(ivChart, [], { data: [result.data.stats.iv_1_9], backgroundColor: 'brown', label: '1-9% IV' });
                 addDataset(ivChart, [], { data: [result.data.stats.iv_10_19], backgroundColor: 'pink', label: '10-19% IV' });
@@ -690,8 +712,8 @@
         var end = $('#heatmap-end').val();
         var pokemon = $('#heatmap-pokemon').val();
         var query = `?start=${start}&end=${end}&pokemon_id=${pokemon}`;
-        $.ajax({ 
-            url: "/api/pokemon/heatmap" + query, 
+        $.ajax({
+            url: "/api/pokemon/heatmap" + query,
             type: "POST",
             success: function(result) {
                 if (result === null) {
