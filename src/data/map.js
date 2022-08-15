@@ -491,7 +491,7 @@ async function getGyms(filter) {
         lat,
         lon,
         guarding_pokemon_id,
-        availble_slots,
+        available_slots,
         team_id,
         in_battle,
         name,
@@ -508,7 +508,7 @@ async function getGyms(filter) {
             const name = row.name;
             const team = locale.getTeamName(row.team_id);
             const teamIcon = getTeamIcon(row.team_id);
-            const slots = row.availble_slots === 0 ? 'Full' : row.availble_slots === 6 ? 'Empty' : '' + row.availble_slots;
+            const slots = row.available_slots === 0 ? 'Full' : row.available_slots === 6 ? 'Empty' : '' + row.available_slots;
             const guard = row.guarding_pokemon_id === 0 ? 'None' : pokedex[row.guarding_pokemon_id];
             const pkmnIcon = guard === 'None' ? 'None' : locale.getPokemonIcon(row.guarding_pokemon_id, 0);
             const geofence = svc.getGeofence(row.lat, row.lon);
@@ -692,7 +692,7 @@ async function getGymDefenders(limit = 10) {
 
 async function getGymsUnderAttack(limit = 10) {
     const sql = `
-    SELECT name, lat, lon, team_id, availble_slots, IF(raid_battle_timestamp > UNIX_TIMESTAMP(), 1, 0) AS has_egg, raid_level, raid_battle_timestamp
+    SELECT name, lat, lon, team_id, available_slots, IF(raid_battle_timestamp > UNIX_TIMESTAMP(), 1, 0) AS has_egg, raid_level, raid_battle_timestamp
     FROM gym
     WHERE in_battle = 1
     ORDER BY name ASC
